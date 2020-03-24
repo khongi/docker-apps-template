@@ -1,0 +1,36 @@
+version: '3.7'
+
+services:
+  traefik:
+    image: traefik:v2.1
+    container_name: traefik
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080 # For debugging
+    volumes:
+      - ${DOCKER_ROOT}/traefik/traefik.toml:/etc/traefik/traefik.toml
+      # Must create an empty acme.json with 600 permission before starting
+      - ${USER_ROOT}/docker/letsencrypt/acme.json:/acme.json:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: 
+      - apps-net
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)
+      - traefik.http.routers.api.service=api@internal
+      - traefik.http.routers.api.entrypoints=websecure
+      - traefik.http.routers.api.tls.certresolver=myresolver
+      # middleware redirect
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      # global redirect to https
+      - "traefik.http.routers.redirs.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.redirs.entrypoints=web"
+      - "traefik.http.routers.redirs.middlewares=redirect-to-https"
+      # basic auth
+      # - traefik.http.routers.api.middlewares=auth
+      # - traefik.http.middlewares.auth.basicauth.users=<generate with htpasswd>
+networks: 
+  apps-net:
+    external: true

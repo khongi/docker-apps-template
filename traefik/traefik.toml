@@ -1,0 +1,39 @@
+[log]
+  # DEBUG, PANIC, FATAL, ERROR, WARN, and INFO
+  level = "DEBUG" # For debugging
+
+[api]
+  dashboard = true
+  debug = true # For debugging
+  insecure = true # For debugging
+
+[providers.docker]
+  endpoint = "unix:///var/run/docker.sock"
+  exposedByDefault = false # You have to enable with labels
+  network = "apps-net"
+
+[entryPoints]
+  [entryPoints.web]
+    address = ":80"
+
+  [entryPoints.websecure]
+    address = ":443"
+
+[certificatesResolvers.myresolver.acme]
+  email = "youremail@address.com"
+  storage = "acme.json"
+  # For testing, use staging server - COMMENT BELOW LINE WHEN DONE WITH SETUP
+  caServer = "https://acme-staging-v02.api.letsencrypt.org/directory"
+  [certificatesResolvers.myresolver.acme.httpChallenge]
+    # Port 80 needs to be open
+    entryPoint = "web"
+
+[ping]
+  entryPoint = "web"
+
+[http]
+  [http.routers]
+     # Define a connection between requests and services
+     [http.routers.to-dashboard]
+      rule = "Host(`traefik.${DOMAIN}`)"
+      service = "traefik"

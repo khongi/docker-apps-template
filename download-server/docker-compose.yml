@@ -1,0 +1,116 @@
+version: '3.7'
+services:
+
+  qbittorrent:
+    image: linuxserver/qbittorrent
+    container_name: qbittorrent
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK_SET=022
+      - WEBUI_PORT=${QBITTORRENT_WEBUI_PORT}
+    volumes:
+      - ${DOCKER_ROOT}/qbittorrent/config:/config
+      - ${DOCKER_ROOT}/qbittorrent/torrent-files/:/torrents
+      - ${DOCKER_ROOT}/qbittorrent/certs:/certs
+      - ${DOCKER_ROOT}/qbittorrent/local/logs:/logs
+      - ${DOWNLOAD_ROOT}/Completed:/downloads/Completed
+      - ${DOWNLOAD_ROOT}/Temp:/downloads/Temp
+    ports:
+      - ${QBITTORRENT_WEBUI_PORT}:${QBITTORRENT_WEBUI_PORT}
+      - 6881:6881
+      - 6881:6881/udp
+      - 10625:10625
+    restart: unless-stopped
+    networks: 
+      - apps-net
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.qb.rule=Host(`qbittorrent.${DOMAIN}`)
+      - traefik.http.routers.qb.entrypoints=websecure
+      - traefik.http.routers.qb.tls.certresolver=myresolver
+      - traefik.http.services.qb.loadbalancer.server.port=${QBITTORRENT_WEBUI_PORT}
+      - traefik.http.services.qb.loadbalancer.passhostheader=false
+
+  jackett:
+    image: linuxserver/jackett
+    container_name: jackett
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - RUN_OPTS=
+    volumes:
+      - ${DOCKER_ROOT}/jackett/config:/config
+      - ${DOCKER_ROOT}/jackett/blackhole:/downloads
+    ports:
+      - 9117:9117
+    restart: unless-stopped
+    networks: 
+      - apps-net
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.jackett.rule=Host(`jackett.${DOMAIN}`)
+      - traefik.http.routers.jackett.entrypoints=websecure
+      - traefik.http.routers.jackett.tls.certresolver=myresolver
+
+  sonarr:
+    image: linuxserver/sonarr
+    container_name: sonarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK_SET=022
+    volumes:
+      - ${DOCKER_ROOT}/sonarr/config:/config
+      - ${MEDIA_ROOT}/Series:/tv
+      - ${DOWNLOAD_ROOT}/Completed:/downloads
+    ports:
+      - 8989:8989
+    links:
+      - jackett:jackett
+      - qbittorrent:qbittorrent
+    restart: unless-stopped
+    networks: 
+      - apps-net
+    depends_on: 
+      - qbittorrent
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN}`)
+      - traefik.http.routers.sonarr.entrypoints=websecure
+      - traefik.http.routers.sonarr.tls.certresolver=myresolver
+
+  radarr:
+    image: linuxserver/radarr
+    container_name: radarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK_SET=022 #optional
+    volumes:
+      - ${DOCKER_ROOT}/radarr/config:/config
+      - ${MEDIA_ROOT}/Movies:/movies
+      - ${DOWNLOAD_ROOT}/Completed:/downloads
+    ports:
+      - 7878:7878
+    links:
+      - jackett:jackett
+      - qbittorrent:qbittorrent
+    restart: unless-stopped
+    networks: 
+      - apps-net
+    depends_on: 
+      - qbittorrent
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN}`)
+      - traefik.http.routers.radarr.entrypoints=websecure
+      - traefik.http.routers.radarr.tls.certresolver=myresolver
+
+networks: 
+  apps-net:
+    external: true

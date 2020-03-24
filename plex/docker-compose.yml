@@ -1,0 +1,63 @@
+version: '3.7'
+services:
+
+  plex:
+    container_name: plex
+    image: linuxserver/plex
+    ports:
+      - ${PLEX_EXTERNAL_PORT}:32400
+      - ${PLEX_EXTERNAL_PORT}:32400/udp
+      - 32469:32469
+      - 32469:32469/udp
+      - 6353:5353/udp
+      - 21900:1900/udp
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - VERSION=${PLEX_VERSION_TAG}
+      - UMASK_SET=022
+    hostname: ${PLEX_HOSTNAME}
+    volumes:
+      - '${DOCKER_ROOT}/plex/config:/config'
+      - '${DOCKER_ROOT}/plex/transcode:/transcode'
+      - '${MEDIA_ROOT}/Series:/data/tv'
+      - '${MEDIA_ROOT}/Movies:/data/movies'
+    restart: unless-stopped
+    networks: 
+      - apps-net
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.plex.rule=Host(`plex.${DOMAIN}`)
+      - traefik.http.routers.plex.entrypoints=websecure
+      - traefik.http.routers.plex.tls.certresolver=myresolver
+      - traefik.http.services.plex.loadbalancer.server.port=${PLEX_EXTERNAL_PORT}
+
+  tautulli:
+    image: linuxserver/tautulli
+    container_name: tautulli
+    restart: unless-stopped
+    ports:
+      - 8181:8181
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - UMASK_SET=022
+    volumes:
+      - '${DOCKER_ROOT}/tautulli/config:/config'
+      - '${DOCKER_ROOT}/plex/config/Library/Application Support/Plex Media Server/Logs:/logs:ro'
+      - '/etc/localtime:/etc/localtime:ro'
+    networks: 
+      - apps-net
+    depends_on:
+      - plex
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.tautulli.rule=Host(`tautulli.${DOMAIN}`)
+      - traefik.http.routers.tautulli.entrypoints=websecure
+      - traefik.http.routers.tautulli.tls.certresolver=myresolver
+
+networks: 
+  apps-net:
+    external: true

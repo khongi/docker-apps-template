@@ -1,0 +1,28 @@
+version: '3.7'
+services:    
+  duplicati:
+    image: linuxserver/duplicati
+    container_name: duplicati
+    restart: unless-stopped
+    ports:
+      - 8200:8200
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK_SET=022
+    volumes:
+      - '${DOCKER_ROOT}/duplicati:/config'
+      - '${DISK_1_ROOT}:${DISK_1_ROOT}'
+      - '${USER_ROOT}:${USER_ROOT}'
+      - '${BACKUP_ROOT}:/backups'
+    networks:
+      - apps-net
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.duplicati.rule=Host(`duplicati.${DOMAIN}`)
+      - traefik.http.routers.duplicati.entrypoints=websecure
+      - traefik.http.routers.duplicati.tls.certresolver=myresolver
+networks:
+  apps-net:
+    external: true

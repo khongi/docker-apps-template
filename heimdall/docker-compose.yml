@@ -1,0 +1,22 @@
+version: '3.7'
+services:
+  heimdall:
+    image: linuxserver/heimdall
+    container_name: heimdall
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${DOCKER_ROOT}/heimdall:/config
+    restart: unless-stopped
+    networks: 
+      - apps-net
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.heimdall.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.heimdall.entrypoints=websecure
+      - traefik.http.routers.heimdall.tls.certresolver=myresolver
+networks: 
+  apps-net:
+    external: true

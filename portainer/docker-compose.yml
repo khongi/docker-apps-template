@@ -1,0 +1,23 @@
+version: '3.7'
+
+services:
+  portainer:
+    image: portainer/portainer
+    container_name: portainer
+    command: -H unix:///var/run/docker.sock
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOCKER_ROOT}/portainer:/data
+    ports: 
+      - 9009:9000
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN}`)
+      - traefik.http.routers.portainer.entrypoints=websecure
+      - traefik.http.routers.portainer.tls.certresolver=myresolver
+    networks: 
+      - apps-net
+networks:
+  apps-net:
+    external: true

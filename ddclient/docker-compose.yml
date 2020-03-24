@@ -1,0 +1,12 @@
+version: '3.7'
+services:
+  ddclient:
+    image: linuxserver/ddclient
+    container_name: ddclient
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${DOCKER_ROOT}/ddclient:/config
+    restart: unless-stopped
